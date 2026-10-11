@@ -1,0 +1,94 @@
+# SPDX-FileCopyrightText: 2026 Nicolai Buchwitz <nb@tipi-net.de>
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dmxtty"
+description = "DMX512 transmitter for Linux serial interfaces with an RS485 transceiver"
+version = "0.1.0"
+readme = "README.md"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+authors = [{ name = "Nicolai Buchwitz", email = "nb@tipi-net.de" }]
+maintainers = [{ name = "Nicolai Buchwitz", email = "nb@tipi-net.de" }]
+keywords = ["dmx", "dmx512", "rs485", "serial", "lighting"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Hardware",
+    "Typing :: Typed",
+]
+dependencies = ["pyserial>=3.4"]
+requires-python = ">= 3.11"
+
+[project.urls]
+Documentation = "https://dmxtty.readthedocs.io/"
+Repository = "https://github.com/nbuchwitz/python3-dmxtty"
+Issues = "https://github.com/nbuchwitz/python3-dmxtty/issues"
+
+[project.optional-dependencies]
+dev = ["ruff", "mypy", "types-pyserial"]
+test = ["pytest", "pytest-cov"]
+docs = [
+    "sphinx>=7.0",
+    "sphinx-rtd-theme>=2.0",
+    "sphinx-autodoc-typehints>=1.24",
+]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.package-data]
+dmxtty = ["py.typed"]
+
+[tool.ruff]
+line-length = 100
+lint.select = [
+    "ANN", # flake8-annotations
+    "B",   # flake8-bugbear
+    "D",   # pydocstyle
+    "E",   # pycodestyle
+    "F",   # Pyflakes
+    "Q",   # flake8-quotes
+]
+lint.ignore = [
+    "D203", # incompatible with D211
+    "D213", # incompatible with D212
+    "D105", # undocumented-magic-method
+    "D107", # undocumented-public-init
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ANN", "D"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+addopts = "-v --tb=short"
+pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["src/dmxtty"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
