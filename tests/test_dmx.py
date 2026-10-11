@@ -273,3 +273,14 @@ def test_rs485_unmanaged_without_rs485_support(rs485, monkeypatch):
     with pytest.raises(OSError):
         DMX("/dev/ttyAMA0")
     DMX("/dev/ttyAMA0", manage_rs485=False).close()
+
+
+def test_rs485_flag_values_match_uapi():
+    # include/uapi/linux/serial.h
+    from dmxtty import _rs485
+
+    assert _rs485.SER_RS485_ENABLED == 0x01
+    assert _rs485.SER_RS485_RTS_ON_SEND == 0x02
+    assert _rs485.SER_RS485_RTS_AFTER_SEND == 0x04
+    assert _rs485.SER_RS485_RX_DURING_TX == 0x10
+    assert _rs485.SER_RS485_TERMINATE_BUS == 0x20

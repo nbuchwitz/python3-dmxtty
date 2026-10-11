@@ -11,8 +11,9 @@ import struct
 SER_RS485_ENABLED = 1 << 0
 SER_RS485_RTS_ON_SEND = 1 << 1
 SER_RS485_RTS_AFTER_SEND = 1 << 2
-SER_RS485_RX_DURING_TX = 1 << 3
-SER_RS485_TERMINATE_BUS = 1 << 4
+# bit 3 is the retired SER_RS485_RTS_BEFORE_SEND
+SER_RS485_RX_DURING_TX = 1 << 4
+SER_RS485_TERMINATE_BUS = 1 << 5
 
 # from include/uapi/asm-generic/ioctls.h (differs on alpha, mips, ppc, sparc)
 TIOCGRS485 = 0x542E
