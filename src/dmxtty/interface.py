@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import errno
+import fcntl
 import os
 import threading
 import time
@@ -57,7 +59,7 @@ class DMX:
         If ``manage_rs485`` is set and the RS485 configuration of ``port``
         cannot be read or changed
     serial.SerialException
-        If ``port`` cannot be opened
+        If ``port`` cannot be opened or is in use by another process
     """
 
     BAUDRATE = 250000
@@ -439,6 +441,16 @@ class DMX:
         """Disable RS485 mode, keeping the initial configuration for close()."""
         fd = self._open_fd()
         try:
+            # Same lock as pyserial's exclusive open. Never change the RS485
+            # configuration under another user of the port. Released on close
+            # so pyserial can take it.
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise serial.SerialException(
+                    errno.EBUSY, f"{self._port} is in use by another process"
+                ) from None
+
             rs485_config = get_rs485_config(fd)
             flags = get_rs485_flags(rs485_config)
 

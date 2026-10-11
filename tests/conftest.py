@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import errno
+
 import pytest
 
 import dmxtty.interface
@@ -60,6 +62,7 @@ class FakeRS485:
         set_rs485_flags(self.config, flags)
         self.history = []
         self.open_fds = 0
+        self.locked_by_other = False
 
     def get(self, fd):
         return bytearray(self.config)
@@ -75,6 +78,10 @@ class FakeRS485:
     def os_close(self, fd):
         self.open_fds -= 1
 
+    def flock(self, fd, operation):
+        if self.locked_by_other:
+            raise BlockingIOError(errno.EAGAIN, "Resource temporarily unavailable")
+
 
 @pytest.fixture
 def rs485(monkeypatch):
@@ -83,6 +90,7 @@ def rs485(monkeypatch):
     monkeypatch.setattr(dmxtty.interface, "set_rs485_config", fake.set)
     monkeypatch.setattr(dmxtty.interface.os, "open", fake.os_open)
     monkeypatch.setattr(dmxtty.interface.os, "close", fake.os_close)
+    monkeypatch.setattr(dmxtty.interface.fcntl, "flock", fake.flock)
     monkeypatch.setattr(dmxtty.interface.serial, "Serial", FakeSerial)
     FakeSerial.instances.clear()
     return fake

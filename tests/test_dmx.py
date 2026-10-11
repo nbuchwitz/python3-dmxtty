@@ -51,6 +51,16 @@ def test_rs485_untouched_when_disabled(rs485):
     assert rs485.history == []
 
 
+def test_port_in_use_is_left_alone(rs485):
+    rs485.locked_by_other = True
+    initial = bytes(rs485.config)
+    with pytest.raises(serial.SerialException, match="in use"):
+        DMX("/dev/ttyAMA0")
+    assert rs485.history == []
+    assert bytes(rs485.config) == initial
+    assert rs485.open_fds == 0
+
+
 def test_rs485_restored_when_open_fails(rs485, monkeypatch):
     def fail(*args, **kwargs):
         raise serial.SerialException("busy")
