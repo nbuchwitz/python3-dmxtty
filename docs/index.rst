@@ -19,6 +19,7 @@ Features
 * Works with any Linux tty driving an RS485 transceiver
 * 1-based channel addressing, matching fixture start addresses
 * Background refresh at a configurable rate
+* Helpers for crossfades, colors and fixture groups
 * Configurable start code and universe size (24 to 512 channels)
 * Restores the interface's RS485 configuration on close
 * One universe per UART, multiple universes on boards with several UARTs

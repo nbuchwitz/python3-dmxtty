@@ -61,6 +61,43 @@ Universes with fewer channels allow faster refresh rates:
 :meth:`~dmxtty.DMX.stop` ends the refresh and raises the error that
 terminated it, if any. :meth:`~dmxtty.DMX.close` stops it as well.
 
+Helpers
+-------
+
+:class:`~dmxtty.DMX` only handles the universe and its transmission.
+:mod:`dmxtty.fx` builds on that with helpers for colors, fades and groups of
+RGB fixtures.
+
+:func:`~dmxtty.fx.fade` crossfades consecutive channels linearly from their
+current values and blocks until the fade is done. With the background
+refresh running, each step goes out with the next packet. Otherwise every
+step is sent as a packet:
+
+.. code-block:: python
+
+   from dmxtty.fx import fade
+
+   fade(dmx, [255, 120, 20, 255], 3.0, start=1)  # warm white in 3 seconds
+   fade(dmx, [0, 0, 0, 0], 1.5, start=1)         # and out again
+
+:class:`~dmxtty.fx.Rig` addresses a group of RGB fixtures by index instead of
+channel. Brightness goes to the dimmer channel if the fixtures have one,
+otherwise the colors are scaled:
+
+.. code-block:: python
+
+   from dmxtty.fx import Rig, hsv
+
+   rig = Rig(dmx, [1, 6, 11], dimmer=4)
+   rig.fill((255, 0, 0), level=0.5)       # all fixtures red at half
+   rig.set(2, hsv(0.6))                   # third fixture blue
+   rig.fade((255, 200, 120), 5.0)         # all to warm white in 5 seconds
+
+:func:`~dmxtty.fx.blend`, :func:`~dmxtty.fx.gamma` and :func:`~dmxtty.fx.hsv`
+mix colors, correct brightness for the eye and walk the color wheel.
+``examples/effects.py`` combines them into effects such as fire, lightning
+and sunrise.
+
 RS485 Mode
 ----------
 

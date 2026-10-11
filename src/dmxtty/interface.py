@@ -90,6 +90,7 @@ class DMX:
         self._tx_lock = threading.Lock()
 
         self._refresh_thread: threading.Thread | None = None
+        self._refresh_rate = 0.0
         self._refresh_stop = threading.Event()
         self._refresh_error: BaseException | None = None
 
@@ -147,6 +148,11 @@ class DMX:
     def is_open(self) -> bool:
         """Whether the serial interface is open."""
         return self._serial is not None and self._serial.is_open
+
+    @property
+    def refresh_rate(self) -> float | None:
+        """Packets per second of the background refresh, None if it is not running."""
+        return self._refresh_rate if self.is_running else None
 
     @property
     def is_running(self) -> bool:
@@ -217,16 +223,11 @@ class DMX:
         ValueError
             If a value is out of range
         """
-        self._check_address(start)
         data = bytes(values)
-        end = start + len(data)
-        if end - 1 > self.channels:
-            raise IndexError(
-                f"{len(data)} values starting at channel {start} exceed {self.channels} channels"
-            )
+        self._check_span(start, len(data))
 
         with self._frame_lock:
-            self._frame[start:end] = data
+            self._frame[start : start + len(data)] = data
 
     def clear(self) -> None:
         """Set all channels to 0."""
@@ -305,6 +306,7 @@ class DMX:
 
         self._refresh_stop.clear()
         self._refresh_error = None
+        self._refresh_rate = rate
         self._refresh_thread = threading.Thread(
             target=self._refresh, args=(1 / rate,), name=f"dmx-{self._port}", daemon=True
         )
@@ -351,6 +353,13 @@ class DMX:
         # __init__ may have failed before all attributes were set
         if hasattr(self, "_refresh_stop"):
             self.close()
+
+    def _check_span(self, start: int, count: int) -> None:
+        self._check_address(start)
+        if start + count - 1 > self.channels:
+            raise IndexError(
+                f"{count} values starting at channel {start} exceed {self.channels} channels"
+            )
 
     def _check_address(self, address: int) -> None:
         if not 1 <= address <= self.channels:
