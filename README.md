@@ -67,11 +67,13 @@ need this workaround.
 
 - [`examples/effects.py`](examples/effects.py): breathe, fire, sunrise, police, lightning, strobe, chase and twinkle
 - [`examples/rainbow.py`](examples/rainbow.py): rainbow across RGB fixtures, each shifted in hue
+- [`examples/artnet_node.py`](examples/artnet_node.py): Art-Net to DMX node, one universe per serial interface, discoverable via ArtPoll
 - [`examples/fade.py`](examples/fade.py): fade fixtures in and out with random colors
 
 ```bash
 python examples/rainbow.py /dev/ttyAMA0 1 6 11 16 --dimmer 4
 python examples/effects.py /dev/ttyAMA0 1 6 --dimmer 4 --effect lightning
+python examples/artnet_node.py 0:/dev/ttyAMA0 1:/dev/ttyAMA2 --name "Stage node"
 ```
 
 ## License
