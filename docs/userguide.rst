@@ -112,6 +112,15 @@ echoed back. The library discards them before each packet.
 If the process is killed without closing the interface, RS485 mode stays
 disabled until it is configured again.
 
+If the transceiver is always enabled, for example with DE tied high, or the
+driver has no RS485 support at all, as with most USB adapters, pass
+``manage_rs485=False`` to leave the RS485 configuration untouched. RS485 mode
+must then already be off, otherwise no break is sent:
+
+.. code-block:: python
+
+   dmx = DMX("/dev/ttyUSB0", manage_rs485=False)
+
 .. note::
 
    Patches that lift this limitation have been submitted to the Linux kernel.

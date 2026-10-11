@@ -42,13 +42,20 @@ class DMX:
     channels : int, optional
         Number of channel slots per packet, between :attr:`MIN_CHANNELS` and
         :attr:`MAX_CHANNELS`. Shorter packets allow a higher refresh rate.
+    manage_rs485 : bool, optional
+        Disable the kernel RS485 mode of ``port`` while it is open and restore
+        it on close. Pass False if the transceiver is always enabled, e.g.
+        with DE tied high, or if the driver has no RS485 support (USB
+        adapters). RS485 mode must then already be off, otherwise no break
+        is sent.
 
     Raises
     ------
     ValueError
         If ``start_code`` or ``channels`` are out of range
     OSError
-        If the RS485 configuration of ``port`` cannot be read or changed
+        If ``manage_rs485`` is set and the RS485 configuration of ``port``
+        cannot be read or changed
     serial.SerialException
         If ``port`` cannot be opened
     """
@@ -68,7 +75,12 @@ class DMX:
     DEFAULT_REFRESH_RATE = 40.0
 
     def __init__(
-        self, port: str, *, start_code: int = START_CODE, channels: int = MAX_CHANNELS
+        self,
+        port: str,
+        *,
+        start_code: int = START_CODE,
+        channels: int = MAX_CHANNELS,
+        manage_rs485: bool = True,
     ) -> None:
         _check_value(start_code, "start code")
         if not self.MIN_CHANNELS <= channels <= self.MAX_CHANNELS:
@@ -99,7 +111,8 @@ class DMX:
         # This has to happen while the port is closed. PL011 leaves the
         # transmitter disabled when RS485 is turned off on an open port.
         # pyserial then asserts RTS on open, which enables the transceiver.
-        self._disable_rs485_mode()
+        if manage_rs485:
+            self._disable_rs485_mode()
 
         try:
             self._serial = serial.Serial(

@@ -202,3 +202,23 @@ def test_start_requires_open_and_positive_rate(rs485):
     d.close()
     with pytest.raises(RuntimeError):
         d.start()
+
+
+def test_rs485_unmanaged_leaves_config_alone(rs485, frames):
+    initial = bytes(rs485.config)
+    with DMX("/dev/ttyAMA0", manage_rs485=False) as d:
+        d.send()
+    assert rs485.history == []
+    assert rs485.open_fds == 0
+    assert bytes(rs485.config) == initial
+    assert len(frames()) == 1
+
+
+def test_rs485_unmanaged_without_rs485_support(rs485, monkeypatch):
+    def unsupported(fd):
+        raise OSError(25, "Inappropriate ioctl for device")
+
+    monkeypatch.setattr(dmxtty.interface, "get_rs485_config", unsupported)
+    with pytest.raises(OSError):
+        DMX("/dev/ttyAMA0")
+    DMX("/dev/ttyAMA0", manage_rs485=False).close()
