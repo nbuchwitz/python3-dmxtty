@@ -65,11 +65,13 @@ need this workaround.
 
 ## Examples
 
+- [`examples/effects.py`](examples/effects.py): breathe, fire, sunrise, police, lightning, strobe, chase and twinkle
 - [`examples/rainbow.py`](examples/rainbow.py): rainbow across RGB fixtures, each shifted in hue
 - [`examples/fade.py`](examples/fade.py): fade fixtures in and out with random colors
 
 ```bash
 python examples/rainbow.py /dev/ttyAMA0 1 6 11 16 --dimmer 4
+python examples/effects.py /dev/ttyAMA0 1 6 --dimmer 4 --effect lightning
 ```
 
 ## License

@@ -11,10 +11,10 @@ a dimmer on the fourth, patched at addresses 1, 6, 11 and 16:
 """
 
 import argparse
-import colorsys
 import time
 
 from dmxtty import DMX
+from dmxtty.fx import Rig, hsv
 
 FPS = 40
 
@@ -34,21 +34,16 @@ def main() -> None:
     args = parser.parse_args()
 
     with DMX(args.port) as dmx:
-        if args.dimmer is not None:
-            for address in args.addresses:
-                dmx.set_channel(address + args.dimmer - 1, 255)
-
+        rig = Rig(dmx, args.addresses, args.dimmer)
         dmx.start(rate=FPS)
 
         start = time.monotonic()
         try:
             while True:
                 phase = (time.monotonic() - start) / args.period
-                for index, address in enumerate(args.addresses):
+                for index in range(len(rig)):
                     # spread the fixtures evenly over the color wheel
-                    hue = (phase + index / len(args.addresses)) % 1.0
-                    rgb = colorsys.hsv_to_rgb(hue, 1.0, args.brightness)
-                    dmx.set_channels([round(c * 255) for c in rgb], start=address)
+                    rig.set(index, hsv(phase + index / len(rig)), args.brightness)
                 time.sleep(1 / FPS)
         except KeyboardInterrupt:
             pass
