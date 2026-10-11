@@ -14,7 +14,13 @@ import serial
 import dmxtty.interface
 from conftest import FakeSerial
 from dmxtty import DMX
-from dmxtty._rs485 import SER_RS485_ENABLED, SER_RS485_RTS_ON_SEND, set_rs485_flags
+from dmxtty._rs485 import (
+    SER_RS485_ENABLED,
+    SER_RS485_RTS_ON_SEND,
+    SER_RS485_TERMINATE_BUS,
+    get_rs485_flags,
+    set_rs485_flags,
+)
 
 
 def last_frame():
@@ -34,7 +40,7 @@ def test_open_configures_port(universe):
 def test_rs485_mode_disabled_while_open_and_restored(rs485):
     initial = bytes(rs485.config)
     d = DMX("/dev/ttyAMA0")
-    assert rs485.history == [SER_RS485_RTS_ON_SEND]
+    assert rs485.history == [SER_RS485_ENABLED | SER_RS485_RTS_ON_SEND, 0]
     d.close()
     assert bytes(rs485.config) == initial
     assert rs485.open_fds == 0
@@ -42,13 +48,39 @@ def test_rs485_mode_disabled_while_open_and_restored(rs485):
 
     # second close is a no-op
     d.close()
-    assert len(rs485.history) == 2
+    assert len(rs485.history) == 3
 
 
-def test_rs485_untouched_when_disabled(rs485):
+def test_termination_disabled_and_restored(rs485):
+    set_rs485_flags(
+        rs485.config, SER_RS485_ENABLED | SER_RS485_RTS_ON_SEND | SER_RS485_TERMINATE_BUS
+    )
+    rs485.terminated = True
+    initial = bytes(rs485.config)
+
+    d = DMX("/dev/ttyAMA0")
+    assert not rs485.terminated
+    assert not get_rs485_flags(rs485.config) & SER_RS485_ENABLED
+    d.close()
+    assert rs485.terminated
+    assert bytes(rs485.config) == initial
+
+
+def test_termination_cleared_when_rs485_already_disabled(rs485):
+    # e.g. left behind by a process that was killed
     set_rs485_flags(rs485.config, 0)
+    rs485.terminated = True
+
     DMX("/dev/ttyAMA0").close()
-    assert rs485.history == []
+    assert not rs485.terminated
+    assert rs485.history == [SER_RS485_ENABLED | SER_RS485_RTS_ON_SEND, 0]
+    assert get_rs485_flags(rs485.config) == 0
+
+
+def test_termination_not_implemented(rs485):
+    rs485.has_termination = False
+    with DMX("/dev/ttyAMA0"):
+        assert rs485.history == [SER_RS485_ENABLED | SER_RS485_RTS_ON_SEND, 0]
 
 
 def test_port_in_use_is_left_alone(rs485):
@@ -58,6 +90,15 @@ def test_port_in_use_is_left_alone(rs485):
         DMX("/dev/ttyAMA0")
     assert rs485.history == []
     assert bytes(rs485.config) == initial
+    assert rs485.open_fds == 0
+
+
+def test_rs485_not_implemented(rs485):
+    set_rs485_flags(rs485.config, 0)
+    rs485.supported = False
+    with DMX("/dev/ttyAMA0") as d:
+        assert d.is_open
+    assert rs485.history == []
     assert rs485.open_fds == 0
 
 

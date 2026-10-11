@@ -109,6 +109,10 @@ enabled through RTS instead, which stays asserted while the port is open.
 As a side effect, the receiver stays enabled and transmitted packets are
 echoed back. The library discards them before each packet.
 
+Bus termination is switched off while the interface is in use, as the
+terminator belongs at the far end of the DMX line, not at the transmitter.
+Ports without switchable termination are left as they are.
+
 If the process is killed without closing the interface, RS485 mode stays
 disabled until it is configured again.
 

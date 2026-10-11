@@ -18,6 +18,8 @@ import serial
 
 from ._rs485 import (
     SER_RS485_ENABLED,
+    SER_RS485_RTS_ON_SEND,
+    SER_RS485_TERMINATE_BUS,
     get_rs485_config,
     get_rs485_flags,
     set_rs485_config,
@@ -45,8 +47,8 @@ class DMX:
         Number of channel slots per packet, between :attr:`MIN_CHANNELS` and
         :attr:`MAX_CHANNELS`. Shorter packets allow a higher refresh rate.
     manage_rs485 : bool, optional
-        Disable the kernel RS485 mode of ``port`` while it is open and restore
-        it on close. Pass False if the transceiver is always enabled, e.g.
+        Disable the kernel RS485 mode and bus termination of ``port`` while
+        it is open and restore both on close. Pass False if the transceiver is always enabled, e.g.
         with DE tied high, or if the driver has no RS485 support (USB
         adapters). RS485 mode must then already be off, otherwise no break
         is sent.
@@ -438,7 +440,7 @@ class DMX:
         return os.open(self._port, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
 
     def _disable_rs485_mode(self) -> None:
-        """Disable RS485 mode, keeping the initial configuration for close()."""
+        """Disable RS485 mode and bus termination, keeping the initial configuration for close()."""
         fd = self._open_fd()
         try:
             # Same lock as pyserial's exclusive open. Never change the RS485
@@ -455,10 +457,27 @@ class DMX:
             flags = get_rs485_flags(rs485_config)
 
             if flags & SER_RS485_ENABLED:
-                _rs485_config = bytearray(rs485_config)
-                set_rs485_flags(_rs485_config, flags & ~SER_RS485_ENABLED)
-                set_rs485_config(fd, _rs485_config)
                 self._initial_rs485_config = rs485_config
+                enabled = flags & ~SER_RS485_TERMINATE_BUS
+            else:
+                # termination keeps its state when RS485 mode is disabled,
+                # e.g. after a crash, so enable it briefly to clear it
+                enabled = SER_RS485_ENABLED | SER_RS485_RTS_ON_SEND
+
+            # Termination is only switched while RS485 mode is enabled. Ports
+            # without a termination GPIO ignore the flag.
+            config = bytearray(rs485_config)
+            set_rs485_flags(config, enabled)
+            try:
+                set_rs485_config(fd, config)
+            except OSError as exc:
+                # no RS485 support, so nothing to disable
+                if exc.errno == errno.ENOTTY and not flags & SER_RS485_ENABLED:
+                    return
+                raise
+
+            set_rs485_flags(config, enabled & ~SER_RS485_ENABLED)
+            set_rs485_config(fd, config)
         finally:
             os.close(fd)
 

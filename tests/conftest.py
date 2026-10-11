@@ -15,6 +15,7 @@ from dmxtty import DMX
 from dmxtty._rs485 import (
     SER_RS485_ENABLED,
     SER_RS485_RTS_ON_SEND,
+    SER_RS485_TERMINATE_BUS,
     SERIAL_RS485_SIZE,
     get_rs485_flags,
     set_rs485_flags,
@@ -57,9 +58,15 @@ class FakeSerial:
 
 
 class FakeRS485:
-    def __init__(self, flags):
+    """Mimics the serial core handling of struct serial_rs485."""
+
+    def __init__(self, flags, *, supported=True, termination=True):
         self.config = bytearray(SERIAL_RS485_SIZE)
         set_rs485_flags(self.config, flags)
+        self.supported = supported
+        self.has_termination = termination
+        # GPIO state, set from the flags at boot
+        self.terminated = termination and bool(flags & SER_RS485_TERMINATE_BUS)
         self.history = []
         self.open_fds = 0
         self.locked_by_other = False
@@ -68,7 +75,23 @@ class FakeRS485:
         return bytearray(self.config)
 
     def set(self, fd, config):
-        self.config = bytearray(config)
+        if not self.supported:
+            raise OSError(errno.ENOTTY, "Inappropriate ioctl for device")
+
+        config = bytearray(config)
+        flags = get_rs485_flags(config)
+        if not flags & SER_RS485_ENABLED:
+            # uart_sanitize_serial_rs485() clears everything, the
+            # termination GPIO keeps its state
+            config = bytearray(SERIAL_RS485_SIZE)
+        else:
+            if not self.has_termination:
+                flags &= ~SER_RS485_TERMINATE_BUS
+                set_rs485_flags(config, flags)
+            if self.has_termination:
+                self.terminated = bool(flags & SER_RS485_TERMINATE_BUS)
+
+        self.config = config
         self.history.append(get_rs485_flags(config))
 
     def os_open(self, path, flags):
